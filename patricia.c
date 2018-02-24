@@ -118,7 +118,7 @@ int PatriciaInsert(patricia_t *patricia, const char *str)
     for (i = 0; patricia->bits / 8 > i && 0 != str[i]; ++i)
     {
         xor[i] = patricia->data[i] ^ str[i];
-        printf("xor[%d] = %d", i, xor[i]);
+        printf("xor[%d] = 0x%x\n", i, xor[i]);
     }
 
     return (1);
