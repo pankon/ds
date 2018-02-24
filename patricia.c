@@ -30,18 +30,43 @@ patricia_t *PatriciaCreate()
     return (patricia);
 }
 
+static char *BufferCopy(const char *str, size_t *len)
+{
+    char *buffer = NULL;
+    if (0 == *len) /* user requests length */
+    {
+        *len = strlen(str);
+        buffer = malloc(*len + 1);
+        if (NULL == buffer)
+        {
+            return (NULL);
+        }
+        
+        return (strcpy(buffer, str));
+    }
+    
+    /* else user sends length */
+    buffer = malloc(*len + 1);
+    if (NULL == buffer)
+    {
+        return (NULL);
+    }
+    
+    return (strncpy(buffer, str, *len)); 
+}
+
 static int PatriciaSetString(patricia_t *patricia, const char *str)
 {
     char *buffer = NULL;
-    size_t len = strlen(str);
-    buffer = malloc(len + 1);
+    size_t len = 0;
+    buffer = BufferCopy(str, &len);
     if (NULL == buffer)
     {
         PatriciaDestroy(patricia);
         return (1);
     }
     
-    patricia->data = strcpy(buffer, str);
+    patricia->data = buffer;
     patricia->bits = len * 8;
     
     return (0);
@@ -95,10 +120,33 @@ void PatriciaDestroy(patricia_t *patricia)
     return;    
 }
 
+static int PatriciaBranch(patricia_t *patricia, int char_idx, unsigned char data)
+{
+    unsigned char mask = 0x80;
+    /* get n of branches and allocate an array of proper size */
+    
+    while (mask != 0)
+    {
+        if (0x0 != (mask & data))
+        {
+            /* copy last_i - i bits into appropriate buffer */
+            printf("Branch: %d, %d\n", mask, data);
+        }
+        
+        mask >>= 1;
+    }
+    
+    /* create all children and string together */
+
+    return (0); /* bad */
+}
+
 int PatriciaInsert(patricia_t *patricia, const char *str)
 {
     int i = 0;
     char *xor = NULL;
+    char *original = NULL; /* make a copy so data can be freely overwritten */
+    size_t original_len = 0;
     if (NULL == str)
     {
         return (1);
@@ -115,11 +163,27 @@ int PatriciaInsert(patricia_t *patricia, const char *str)
         return (1);
     }
     
-    for (i = 0; patricia->bits / 8 > i && 0 != str[i]; ++i)
+    original = BufferCopy(patricia->data, &original_len);
+    if (NULL == original)
     {
-        xor[i] = patricia->data[i] ^ str[i];
+        return (1);
+    }   
+    
+    for (i = 0; original_len > i && 0 != str[i]; ++i)
+    {
+        xor[i] = original[i] ^ str[i];
         printf("xor[%d] = 0x%x\n", i, xor[i]);
+        if (PatriciaBranch(patricia, i, xor[i]))
+        {
+            /* Only should fail if memory failure */
+            return (1);
+        }
     }
+    
+    free(original);
+    original = NULL;
+    free(xor);
+    xor = NULL;
 
     return (1);
 }
